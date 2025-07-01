@@ -1,6 +1,5 @@
 /* shared_ui.css */
 
-
 /* 1. 기본 디자인 시스템 (Root & Global) */
 
 :root {
@@ -49,18 +48,21 @@
     display: flex;
     flex-direction: column;
     position: relative;
-    width: 250px;
+    /* 기존 250px에서 5% 증가 (250 * 1.05 = 262.5) */
+    width: 262.5px;
     max-height: 90vh; /* 뷰포트 높이의 90% */
     height: auto;
 }
 
 .nai-auto-container.minimized {
-    width: 2.2rem !important;
-    height: 2.2rem !important;
+    /* 기존 2.2rem에서 0.5rem 증가 */
+    width: 2.7rem !important;
+    height: 2.7rem !important;
     cursor: pointer;
     overflow: hidden;
     box-shadow: 0 0.2rem 0.6rem rgba(0, 0, 0, 0.2);
-    margin: 25px; 
+    /* 기존 25px에서 10px 증가 */
+    margin: 35px; 
 }
 .nai-auto-container.minimized > .window-content {
     display: none;
@@ -73,14 +75,14 @@
 }
 .nai-auto-container.minimized .window-header .title { display: none; }
 .nai-auto-container.minimized .window-header .controls { justify-content: center; flex-grow: 1; }
+/* 최소화 시 control-btn을 녹색으로 유지 (다른 변경사항과 충돌하지 않도록 !important 유지) */
 .nai-auto-container.minimized .control-btn { background-color: var(--green-dot) !important; }
-
 
 
 /* 3. 상황별 UI 모드 (Compact & Responsive) */
 
 .nai-auto-compact {
-    width: 250px;
+    width: 262.5px; /* 조정된 너비 */
     overflow: hidden;
 }
 .nai-auto-compact .tab-content { padding: 0.6rem; }
@@ -110,16 +112,41 @@
 }
 
 
-
 /* 4. 창 헤더 */
 
 .window-header { display: flex; align-items: center; padding: 0.3rem 0.5rem; cursor: grab; border-bottom: 1px solid var(--border-color); flex-shrink: 0; height: var(--header-height); }
 .window-header:active { cursor: grabbing; background-color: rgba(255,255,255,0.05); }
 .window-header .controls { display: flex; gap: 0.3rem; }
-.window-header .control-btn { width: 0.7rem; height: 0.7rem; border-radius: 50%; background-color: var(--red-dot); border: 1px solid rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.2s ease, background-color 0.2s ease; }
-.window-header .control-btn:hover { transform: scale(1.15); }
+.window-header .control-btn { 
+    width: 0.7rem; 
+    height: 0.7rem; 
+    border-radius: 50%; 
+    background-color: #888; /* 기본 회색 배경 */
+    border: 1px solid rgba(0,0,0,0.2); 
+    cursor: pointer; 
+    transition: all 0.2s ease; /* transition 속성 통합 */
+    display: flex; /* 내부 콘텐츠를 중앙 정렬하기 위해 flexbox 사용 */
+    align-items: center; /* 세로 중앙 정렬 */
+    justify-content: center; /* 가로 중앙 정렬 */
+    font-size: 0.8rem; /* `-` 기호 크기 조절 */
+    color: transparent; /* 기본적으로 `-` 기호는 투명 */
+    font-weight: bold;
+}
+.window-header .control-btn:hover { 
+    transform: scale(1.15); 
+    background-color: var(--red-dot); /* 호버 시 빨간색 */
+    color: white; /* 호버 시 `-` 기호 보이게 */
+    content: '-'; /* 최소화 아이콘 */
+}
+/* 특정 ID에만 - 아이콘을 적용하도록 수정 */
+#close-minimize-btn:hover::before {
+    content: '-';
+    color: white;
+}
+/* 기존 .window-header .control-btn:hover 에서 content를 제거했으므로,
+   일반 .control-btn이 hover 했을 때의 transform 효과만 유지되도록 함.
+   #close-minimize-btn에 대한 hover 효과는 위에서 오버라이드 됨. */
 .window-header .title { margin: 0; padding-left: 0.5rem; font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
-
 
 
 /* 5. 탭 시스템 */
@@ -139,7 +166,7 @@
     padding: 0.6rem;
     min-height: 0;
     /* 탭 콘텐츠의 최대 높이를 뷰포트 높이의 40%로 설정 (여백 고려) */
-    max-height: calc( 40vh - var(--header-height) - var(--tab-buttons-height) - var(--footer-height) - (0.6rem * 2) );
+    max-height: calc( 40vh - var(--header-height) - var(--tab-buttons-height) - (0.6rem * 2) - var(--footer-height) );
 }
 @keyframes fadeInSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .tab-content.active { display: flex; animation: fadeInSlideUp 0.5s cubic-bezier(0.19, 1, 0.22, 1); }
@@ -148,7 +175,6 @@
 #settings-tab-content {
     /* overflow-y: auto; (이미 .tab-content에 적용되어 중복) */
 }
-
 
 
 /* 6. 공용 섹션 및 입력 요소 */
@@ -207,8 +233,8 @@ textarea.styled-input { resize: vertical; min-height: 3rem; }
     transition: all 0.3s ease-out;
 }
 .settings-fieldset summary {
-    display: flex;
-    align-items: center;
+    display: flex; /* flexbox 사용 */
+    align-items: center; /* 세로 중앙 정렬 */
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 600;
@@ -233,6 +259,7 @@ textarea.styled-input { resize: vertical; min-height: 3rem; }
     transition: transform 0.2s ease;
     font-size: 0.7em;
     color: var(--text-secondary);
+    /* flex 컨테이너 내에서 기본 정렬을 따라가므로 추가적인 정렬 속성 불필요 */
 }
 .settings-fieldset[open] summary::before {
     content: '▼';
@@ -268,6 +295,100 @@ textarea.styled-input { resize: vertical; min-height: 3rem; }
 }
 /* ================================================= */
 
+/* 파일명 템플릿 Pill */
+.filename-template-pill-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px; /* Pill 사이의 간격 */
+    border: 1px solid var(--border-color);
+    border-radius: 0.3rem;
+    padding: 0.5rem;
+    min-height: 38px; /* 최소 높이 설정 */
+    background-color: rgba(0,0,0,0.25);
+    align-items: center;
+}
+
+.template-pill {
+    background-color: var(--accent-color);
+    color: white;
+    padding: 0.3em 0.6em;
+    border-radius: 1em;
+    font-size: 0.8rem;
+    cursor: grab;
+    user-select: none;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.template-pill:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.template-pill.draggable {
+    cursor: grabbing;
+    opacity: 0.8;
+}
+
+.template-pill .delete-pill-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 0.9em;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 2px;
+    line-height: 1;
+}
+
+.template-pill .delete-pill-btn:hover {
+    color: #f0f0f0;
+}
+
+.template-placeholder-text {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    padding: 0.3em 0.6em;
+}
+
+/* 사용 가능한 템플릿 필 버튼 */
+.available-templates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.template-add-button {
+    background-color: #555;
+    color: white;
+    padding: 0.4em 0.8em;
+    border-radius: 1em;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.template-add-button:hover {
+    background-color: #777;
+    transform: translateY(-1px);
+}
+
+.template-add-button:active {
+    transform: translateY(0);
+}
+
+/* 품질 및 포맷 설정 필드셋 테두리 제거 */
+.settings-grid fieldset {
+    border: none; /* fieldset의 테두리 제거 */
+    padding: 0; /* fieldset의 패딩도 제거하여 부모 div의 패딩을 따르도록 */
+    margin: 0; /* fieldset의 마진 제거 */
+}
 
 
 /* 7. Converter 전용 기능 UI */
@@ -439,7 +560,6 @@ progress#generation-progress::-webkit-progress-value { background-color: var(--a
 .action-button.small svg { width: 1em; height: 1em; }
 
 
-
 /* 11. 토스트 알림 */
 
 #nai-auto-toast-container {
@@ -482,7 +602,6 @@ progress#generation-progress::-webkit-progress-value { background-color: var(--a
 .toast.toast-success { background-color: var(--accent-color); }
 .toast.toast-error { background-color: var(--stop-color); }
 .toast.toast-warn { background-color: #ffcb6b; color: #333; }
-
 
 
 /* 12. 단축어 필 (Shortcut Pill) 스타일 */

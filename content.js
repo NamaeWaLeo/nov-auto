@@ -91,6 +91,17 @@ window.NaiAuto.setUIStateGenerating = function(isGeneratingState) {
     if (img2tagInput) img2tagInput.disabled = isGeneratingState;
     if (interrogateImageButton) interrogateImageButton.disabled = isGeneratingState;
 
+    // 파일명 템플릿 Pill 관련 요소 비활성화/활성화
+    const filenameTemplateContainer = uiContainer.querySelector('#filename-template-container');
+    const filenameTemplateAddButtons = uiContainer.querySelectorAll('.available-templates .template-add-button');
+    if (filenameTemplateContainer) {
+        filenameTemplateContainer.style.pointerEvents = isGeneratingState ? 'none' : 'auto';
+        filenameTemplateContainer.style.opacity = isGeneratingState ? '0.6' : '1';
+    }
+    filenameTemplateAddButtons.forEach(button => {
+        button.disabled = isGeneratingState;
+    });
+
 
     if (!isGeneratingState && typeof updateConditionalSettingsUI === 'function') {
         // 생성 중이 아닐 때만 조건부 UI 업데이트 (선택된 포맷에 따라 품질 설정 표시)
@@ -310,6 +321,7 @@ window.NaiAuto.injectUI = function() {
     uiContainer = document.createElement('div');
     uiContainer.className = 'nai-auto-container nai-auto-compact'; 
     
+    // isConverter를 false로 명시하여 NovelAI 페이지에서 Converter UI가 주입되지 않도록 함
     uiContainer.innerHTML = getSharedUIHTML({ isGenerator: true, showHeader: true, isConverter: false, excludeDisclaimerModal: true }); 
     
     uiWrapper.appendChild(uiContainer);
@@ -387,7 +399,7 @@ window.NaiAuto.injectUI = function() {
 
         if (isMinimized) {
             // 복원될 때의 목표 크기 (CSS 변수 사용 또는 고정값)
-            const targetWidth = 250; // .nai-auto-compact의 width
+            const targetWidth = 262.5; // .nai-auto-compact의 width (조정된 너비)
             const targetHeight = 580; // (예상) UI가 확장될 때의 높이
 
             let newLeft = currentRect.left;

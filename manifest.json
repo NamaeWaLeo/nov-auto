@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Nai-Auto by Leo (Chrome)",
-  "version": "3.2",
+  "version": "3.3",
   "description": "NovelAI 이미지 자동 생성/다운로드, 로컬 이미지 처리 및 이미지 프롬프트 추출 기능을 제공하는 확장 프로그램 (3.1.0 Beta)",
   "permissions": [
     "storage",
@@ -67,6 +67,11 @@
         "mac": "Command+Shift+G"
       },
       "description": "자동 생성 시작/중지"
+    }
+  }
+    "browser_specific_settings": {
+    "gecko": {
+      "id": "nai-auto@example.com"
     }
   }
 }

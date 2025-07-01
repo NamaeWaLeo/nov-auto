@@ -1,3 +1,4 @@
+// shared.js
 
 let uiRoot; // 메인 UI 컨테이너 (드래그 가능한 창) 참조
 
@@ -188,11 +189,18 @@ function getSharedUIHTML(config = { isConverter: false, isGenerator: false, show
                                 <span>다운로드 시 메타데이터 제거</span>
                             </label>
                             <div>
-                                <label for="filename-template" style="display: block; margin-top:10px; margin-bottom: 5px;">파일명 템플릿:</label>
-                                <input type="text" id="filename-template" class="styled-input">
-                                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 5px;">
-                                    사용 가능: <code>{prefix}</code>, <code>{prompt}</code>, <code>{timestamp}</code>, <code>{original}</code>
-                                </p>
+                                <label for="filename-template-container" style="display: block; margin-top:10px; margin-bottom: 5px;">파일명 템플릿:</label>
+                                <div id="filename-template-container" class="filename-template-pill-container">
+                                    <span class="template-placeholder-text">여기에 템플릿 요소를 드래그하거나 아래 버튼을 클릭하세요.</span>
+                                </div>
+                                <div class="available-templates">
+                                    <button class="template-add-button" data-template-value="{prefix}">접두사</button>
+                                    <button class="template-add-button" data-template-value="{prompt}">프롬프트</button>
+                                    <button class="template-add-button" data-template-value="{timestamp}">시간</button>
+                                    <button class="template-add-button" data-template-value="{original}">원본파일명</button>
+                                    <button class="template-add-button" data-template-value="_">_(언더바)</button>
+                                    <button class="template-add-button" data-template-value="-">-(하이픈)</button>
+                                </div>
                             </div>
                             <div style="margin-top:10px;">
                                 <label for="filename-prefix" style="display: block; margin-bottom: 5px;">파일 이름 접두사:</label>
@@ -266,9 +274,10 @@ function getSharedUIHTML(config = { isConverter: false, isGenerator: false, show
                                 <label for="ui-scale-select" style="display: block; margin-bottom: 5px;">UI 배율 조정:</label>
                                 <select id="ui-scale-select" class="styled-select">
                                     <option value="70%">70%</option>
-                                    <option value="80%">80%</option>
+                                    <option value="85%">85%</option>
                                     <option value="100%">100% (기본값)</option>
-                                    <option value="120%">120%</option>
+                                    <option value="115%">115%</option>
+                                    <option value="130%">130%</option>
                                 </select>
                             </div>
                         </div>
@@ -412,7 +421,8 @@ function updateConditionalSettingsUI() {
 const SETTINGS_CONFIG = {
     removeMetadata: { selector: '#remove-metadata', type: 'checkbox', default: true },
     filenamePrefix: { selector: '#filename-prefix', type: 'text', default: "" },
-    filenameTemplate: { selector: '#filename-template', type: 'text', default: '{prefix}novelai_{timestamp}_{prompt}' },
+    // filenameTemplate은 이제 배열로 저장됩니다. selector는 더 이상 텍스트 입력 필드가 아닙니다.
+    filenameTemplate: { type: 'array', default: [] }, 
     downloadSubfolder: { selector: '#download-subfolder', type: 'text', default: "NaiAutoDownloads" },
     imageFormat: { selector: '#image-format-select', type: 'select', default: 'jpeg' },
     imageQualityPreference: { selector: '#image-quality-select', type: 'select', default: 'quality' },
@@ -434,6 +444,14 @@ function saveSettings(specificSettings = {}) {
         for (const key in SETTINGS_CONFIG) {
             const config = SETTINGS_CONFIG[key];
             if (!uiRoot) continue;
+
+            if (key === 'filenameTemplate') {
+                // filenameTemplate은 Pill 요소에서 직접 가져와 배열로 저장
+                const templatePills = Array.from(uiRoot.querySelectorAll('#filename-template-container .template-pill'));
+                settingsToStore[key] = templatePills.map(pill => pill.dataset.value);
+                continue; // 다음 설정으로 넘어감
+            }
+
             const name = key.replace(/([A-Z])/g, "-$1").toLowerCase();
             if (config.type === 'radio') {
                 const checkedRadio = uiRoot.querySelector(`input[name="${name}"]:checked`);
@@ -465,12 +483,15 @@ function saveSettings(specificSettings = {}) {
         } else if (Object.keys(specificSettings).length === 0) {
             addLogMessage('설정이 저장되었습니다.', 'info');
             const isScaleSelectActive = document.activeElement && document.activeElement.id === 'ui-scale-select';
-            if (!isScaleSelectActive) {
+            // 파일명 템플릿 변경 시에도 토스트 메시지 표시
+            const isFilenameTemplateChange = Object.keys(specificSettings).includes('filenameTemplate');
+            if (!isScaleSelectActive || isFilenameTemplateChange) {
                 showToast("설정이 저장되었습니다.", "success");
             }
         }
     });
 }
+
 
 function loadSettings() {
     const settingKeys = Object.keys(SETTINGS_CONFIG);
@@ -482,6 +503,12 @@ function loadSettings() {
             const config = SETTINGS_CONFIG[key];
             const value = result[key] ?? config.default;
             if (!uiRoot) continue;
+            
+            if (key === 'filenameTemplate') {
+                renderFilenameTemplatePills(value); // filenameTemplate은 별도 렌더링 함수 호출
+                continue;
+            }
+
             const name = key.replace(/([A-Z])/g, "-$1").toLowerCase();
             if (config.type === 'radio') {
                 const radioToSelect = uiRoot.querySelector(`input[name="${name}"][value="${value}"]`);
@@ -504,7 +531,7 @@ function loadSettings() {
 
         // details 태그의 저장된 open/closed 상태 로드
         uiRoot.querySelectorAll('.settings-fieldset[data-setting-key]').forEach(details => {
-            const dataSettingKey = details.dataset.settingKey;
+            const dataSettingKey = details.dataset.setting-key;
             const key = `fieldset_${dataSettingKey}_open`;
             if (result[key] !== undefined) {
                 details.open = result[key];
@@ -531,12 +558,26 @@ function createFilename(settings, options) {
             promptPart = "untitled";
         }
     }
-    const template = settings.filenameTemplate || '{prefix}novelai_{timestamp}_{prompt}';
-    let finalFilename = template
-        .replace('{prefix}', settings.filenamePrefix.trim() ? `${settings.filenamePrefix.trim()}_` : "")
-        .replace('{prompt}', promptPart)
-        .replace('{timestamp}', timestamp)
-        .replace('{original}', originalName);
+    
+    // filenameTemplate이 배열이므로, 이를 문자열로 조합합니다.
+    const templateArray = settings.filenameTemplate || [];
+    let finalFilename = templateArray.map(item => {
+        switch (item) {
+            case '{prefix}': return settings.filenamePrefix.trim() ? `${settings.filenamePrefix.trim()}_` : "";
+            case '{prompt}': return promptPart;
+            case '{timestamp}': return timestamp;
+            case '{original}': return originalName;
+            case '_': return "_";
+            case '-': return "-";
+            default: return item; // 예상치 못한 값 방지
+        }
+    }).join('');
+
+    // 빈 템플릿일 경우 기본값 설정
+    if (finalFilename.trim() === '') {
+        finalFilename = 'novelai_image';
+    }
+
 
     // 다운로드 하위 폴더 적용
     if (settings.downloadSubfolder && settings.downloadSubfolder.trim() !== "") {
@@ -702,6 +743,93 @@ function renderHistory() {
     });
 }
 
+// 파일명 템플릿 Pill 관련 함수
+function createTemplatePill(value) {
+    const pill = document.createElement('span');
+    pill.className = 'template-pill';
+    pill.dataset.value = value; // 실제 값 저장
+    
+    let displayText = value;
+    switch (value) {
+        case '{prefix}': displayText = '접두사'; break;
+        case '{prompt}': displayText = '프롬프트'; break;
+        case '{timestamp}': displayText = '시간'; break;
+        case '{original}': displayText = '원본파일명'; break;
+    }
+    pill.textContent = displayText;
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-pill-btn';
+    deleteBtn.innerHTML = '&times;';
+    deleteBtn.title = '이 요소 제거';
+    deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        pill.remove();
+        updateFilenameTemplatePlaceholder();
+        saveSettings({ filenameTemplate: getFilenameTemplateArray() });
+    });
+    pill.appendChild(deleteBtn);
+
+    pill.draggable = true;
+    pill.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', value);
+        e.dataTransfer.effectAllowed = 'move';
+        pill.classList.add('draggable');
+    });
+    pill.addEventListener('dragend', () => {
+        pill.classList.remove('draggable');
+    });
+
+    return pill;
+}
+
+function getFilenameTemplateArray() {
+    const container = uiRoot?.querySelector('#filename-template-container');
+    if (!container) return [];
+    return Array.from(container.querySelectorAll('.template-pill')).map(pill => pill.dataset.value);
+}
+
+function renderFilenameTemplatePills(templateArray) {
+    const container = uiRoot?.querySelector('#filename-template-container');
+    if (!container) return;
+
+    container.innerHTML = ''; // 기존 Pill 모두 제거
+
+    if (templateArray.length === 0) {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'template-placeholder-text';
+        placeholder.textContent = '여기에 템플릿 요소를 드래그하거나 아래 버튼을 클릭하세요.';
+        container.appendChild(placeholder);
+    } else {
+        templateArray.forEach(value => {
+            container.appendChild(createTemplatePill(value));
+        });
+    }
+    updateFilenameTemplatePlaceholder();
+}
+
+function updateFilenameTemplatePlaceholder() {
+    const container = uiRoot?.querySelector('#filename-template-container');
+    if (!container) return;
+
+    const pills = container.querySelectorAll('.template-pill');
+    const placeholder = container.querySelector('.template-placeholder-text');
+
+    if (pills.length === 0) {
+        if (!placeholder) {
+            const newPlaceholder = document.createElement('span');
+            newPlaceholder.className = 'template-placeholder-text';
+            newPlaceholder.textContent = '여기에 템플릿 요소를 드래그하거나 아래 버튼을 클릭하세요.';
+            container.appendChild(newPlaceholder);
+        }
+    } else {
+        if (placeholder) {
+            placeholder.remove();
+        }
+    }
+}
+
+
 // Shared UI 초기화
 function initializeSharedUI(rootElement, actions) {
     uiRoot = rootElement;
@@ -745,9 +873,99 @@ function initializeSharedUI(rootElement, actions) {
         }
     });
     
-    ['#filename-prefix', '#generation-interval', '#filename-template', '#download-subfolder'].forEach(selector => {
+    ['#filename-prefix', '#generation-interval', '#download-subfolder'].forEach(selector => {
         uiRoot.querySelector(selector)?.addEventListener('input', debouncedSave);
     });
+
+    // 파일명 템플릿 Pill 관련 이벤트 리스너 추가
+    const filenameTemplateContainer = uiRoot.querySelector('#filename-template-container');
+    const availableTemplates = uiRoot.querySelector('.available-templates');
+
+    if (filenameTemplateContainer) {
+        filenameTemplateContainer.addEventListener('dragover', (e) => {
+            e.preventDefault(); // 드롭 허용
+        });
+        filenameTemplateContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const data = e.dataTransfer.getData('text/plain');
+            if (data) {
+                const newPill = createTemplatePill(data);
+                let droppedAfter = null;
+                // 드롭된 위치 파악
+                const children = Array.from(filenameTemplateContainer.children);
+                for (let i = 0; i < children.length; i++) {
+                    const childRect = children[i].getBoundingClientRect();
+                    if (e.clientX < childRect.right) { // 마우스 X 좌표가 자식 요소의 오른쪽보다 작으면 해당 요소 앞에 삽입
+                        droppedAfter = children[i];
+                        break;
+                    }
+                }
+                if (droppedAfter && droppedAfter.classList.contains('template-pill')) {
+                    filenameTemplateContainer.insertBefore(newPill, droppedAfter);
+                } else { // 맨 마지막에 추가 (또는 placeholder 앞에)
+                    const placeholder = filenameTemplateContainer.querySelector('.template-placeholder-text');
+                    if (placeholder) {
+                        filenameTemplateContainer.insertBefore(newPill, placeholder);
+                    } else {
+                        filenameTemplateContainer.appendChild(newPill);
+                    }
+                }
+                updateFilenameTemplatePlaceholder();
+                saveSettings({ filenameTemplate: getFilenameTemplateArray() });
+            }
+        });
+        // 내부 Pill의 드래그 드롭 정렬을 위한 리스너 (선택적 구현)
+        filenameTemplateContainer.addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('template-pill')) {
+                e.dataTransfer.setData('text/plain', e.target.dataset.value);
+                e.dataTransfer.effectAllowed = 'move';
+                e.target.classList.add('dragging');
+            }
+        });
+        filenameTemplateContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const draggingPill = document.querySelector('.template-pill.dragging');
+            if (draggingPill && e.target.classList.contains('template-pill') && e.target !== draggingPill) {
+                const rect = e.target.getBoundingClientRect();
+                const midX = rect.left + rect.width / 2;
+                if (e.clientX < midX) {
+                    filenameTemplateContainer.insertBefore(draggingPill, e.target);
+                } else {
+                    filenameTemplateContainer.insertBefore(draggingPill, e.target.nextSibling);
+                }
+            }
+        });
+        filenameTemplateContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const draggingPill = document.querySelector('.template-pill.dragging');
+            if (draggingPill) {
+                draggingPill.classList.remove('dragging');
+                saveSettings({ filenameTemplate: getFilenameTemplateArray() });
+            }
+        });
+        filenameTemplateContainer.addEventListener('dragend', () => {
+            const draggingPill = document.querySelector('.template-pill.dragging');
+            if (draggingPill) draggingPill.classList.remove('dragging');
+        });
+    }
+
+    if (availableTemplates) {
+        availableTemplates.addEventListener('click', (e) => {
+            if (e.target.classList.contains('template-add-button')) {
+                const value = e.target.dataset.templateValue;
+                const newPill = createTemplatePill(value);
+                const placeholder = filenameTemplateContainer.querySelector('.template-placeholder-text');
+                if (placeholder) {
+                    filenameTemplateContainer.insertBefore(newPill, placeholder);
+                } else {
+                    filenameTemplateContainer.appendChild(newPill);
+                }
+                updateFilenameTemplatePlaceholder();
+                saveSettings({ filenameTemplate: getFilenameTemplateArray() });
+            }
+        });
+    }
+
 
     uiRoot.querySelector('#save-api-keys')?.addEventListener('click', () => {
         const geminiKey = uiRoot.querySelector('#gemini-api-key').value;
@@ -865,4 +1083,7 @@ function initializeSharedUI(rootElement, actions) {
     if (uiRoot.querySelector('#shortcuts-tab-content') && typeof window.NaiAuto !== 'undefined' && typeof window.NaiAuto.renderShortcuts === 'function') {
         window.NaiAuto.renderShortcuts();
     }
+    
+    // 로드 후 파일명 템플릿 UI 업데이트
+    updateFilenameTemplatePlaceholder();
 }
