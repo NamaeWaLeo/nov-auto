@@ -1,0 +1,72 @@
+{
+  "manifest_version": 3,
+  "name": "Nai-Auto by Leo (Chrome)",
+  "version": "3.1.2",
+  "description": "NovelAI 이미지 자동 생성/다운로드, 로컬 이미지 처리 및 이미지 프롬프트 추출 기능을 제공하는 확장 프로그램 (3.1.0 Beta)",
+  "permissions": [
+    "storage",
+    "downloads",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://novelai.net/*",
+    "https://generativelanguage.googleapis.com/"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://novelai.net/image*"],
+      "css": ["shared_ui.css"],
+      "js": [
+        "shared.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon.png",
+      "32": "icons/icon.png",
+      "48": "icons/icon.png",
+      "128": "icons/icon.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon.png",
+    "32": "icons/icon.png",
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "shared_ui.css",
+        "shared.js"
+      ],
+      "matches": [
+        "https://novelai.net/*"
+      ]
+    }
+  ],
+  "commands": {
+    "download_current_image": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+D",
+        "mac": "Command+Shift+D"
+      },
+      "description": "현재 이미지 다운로드"
+    },
+    "toggle_generation": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+G",
+        "mac": "Command+Shift+G"
+      },
+      "description": "자동 생성 시작/중지"
+    }
+  }
+}
